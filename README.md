@@ -67,6 +67,7 @@ Right-click the toolbar icon → **Options**, or open the popup and click
 - **Dialect** — American, British, Australian or Canadian English
 - **Anthropic API key** — enables AI rewrites; stored locally, never synced
 - **Model** — Opus 5.5 (default), Sonnet 5.5, or Haiku 4.5
+- **Checks** — every rule Harper offers, searchable, individually switchable
 - **Personal dictionary** — words that are never flagged as misspellings
 - **Disabled sites** — hostnames to stay quiet on
 
@@ -77,7 +78,9 @@ The toolbar popup also has a quick on/off for the current site.
 Three pieces talk over one typed message protocol:
 
 - **Background service worker** — holds the Harper WASM linter, caches results,
-  and is the only place that touches the network.
+  and is the only place that touches the network. A check takes about 10ms once
+  the worker is warm; the content script holds a port open while you have a
+  field focused so Chrome does not evict it and force a 1.5s recompile.
 - **Content script** — finds the focused field, maps plain-text offsets onto
   whatever the browser is actually laying out, and draws the underlines.
 - **Popup and options pages** — settings.
@@ -101,6 +104,16 @@ npx playwright test  # drives the built extension against demo/index.html
 `demo/index.html` is a page of deliberately broken text covering a textarea, an
 input, a contenteditable, a scrolling container, and fields that should be left
 alone. Open it with `npm run dev` running and iterate there.
+
+The Playwright suite loads the real built extension into Chromium and drives
+that page — it is the only thing that proves the underlines actually land where
+they should, so add a case there for anything you fix.
+
+### Not yet done
+
+The site-compatibility pass. The extension is verified against the demo page's
+textarea, input and contenteditable, but not yet against Gmail, Google Docs,
+Notion or the big React editors, each of which has its own quirks.
 
 ## Licence
 

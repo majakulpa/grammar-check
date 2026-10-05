@@ -43,8 +43,16 @@ export function editFor(
 	}
 }
 
+/** One of Harper's checks, as the options page renders it. */
+export interface Rule {
+	name: string;
+	description: string;
+	enabled: boolean;
+}
+
 export type Request =
 	| { type: 'lint'; text: string }
+	| { type: 'getRules' }
 	| { type: 'synonyms'; word: string }
 	| { type: 'rewrite'; text: string; tone: RewriteTone }
 	| { type: 'getSettings' };
@@ -53,6 +61,7 @@ export type RewriteTone = 'clearer' | 'concise' | 'formal' | 'casual';
 
 export type Response =
 	| { type: 'lint'; issues: Issue[] }
+	| { type: 'rules'; rules: Rule[] }
 	| { type: 'synonyms'; words: string[] }
 	| { type: 'rewrite'; text: string }
 	| { type: 'settings'; settings: Settings }
@@ -65,6 +74,12 @@ export interface Settings {
 	disabledHosts: string[];
 	/** Words the user added; never flagged as misspelled. */
 	dictionary: string[];
+	/**
+	 * Only the checks the user has overridden. Harper's defaults are a moving
+	 * target across versions, so storing the full set would silently freeze a
+	 * snapshot of them.
+	 */
+	rules: Record<string, boolean>;
 	/** Absent until the user enters one. The AI features stay hidden without it. */
 	anthropicApiKey?: string;
 	model: string;
@@ -75,6 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	dialect: 'American',
 	disabledHosts: [],
 	dictionary: [],
+	rules: {},
 	model: 'claude-opus-5-5',
 };
 

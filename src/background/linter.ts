@@ -1,7 +1,7 @@
 import { Dialect, LocalLinter, SuggestionKind, type Lint, type Linter } from 'harper.js';
 import { binary } from 'harper.js/binary';
 import { LRUCache } from 'lru-cache';
-import type { Issue, Suggestion } from '../shared/protocol';
+import type { Issue, Rule, Settings, Suggestion } from '../shared/protocol';
 import { getSettings } from './settings';
 
 /**
@@ -30,10 +30,40 @@ const cache = new LRUCache<string, Issue[]>({ max: 500 });
 async function getLinter(dialect: Dialect): Promise<Linter> {
 	if (linter && linterDialect === dialect) return linter;
 
-	linter = new LocalLinter({ binary, dialect });
+	const active = new LocalLinter({ binary, dialect });
+	await active.setup();
+
+	// Rule overrides live on the linter instance, so they have to be re-applied
+	// to each new one rather than set once at install time.
+	const { rules } = await getSettings();
+	if (Object.keys(rules).length > 0) {
+		await active.setLintConfig({ ...(await active.getLintConfig()), ...rules });
+	}
+
+	linter = active;
 	linterDialect = dialect;
-	await linter.setup();
-	return linter;
+	return active;
+}
+
+/** Every check Harper offers, with the user's overrides applied. */
+export async function listRules(): Promise<Rule[]> {
+	const settings = await getSettings();
+	const active = await getLinter(DIALECTS[settings.dialect] ?? Dialect.American);
+
+	const [descriptions, config] = await Promise.all([
+		active.getLintDescriptions(),
+		active.getLintConfig(),
+	]);
+
+	return Object.entries(descriptions)
+		.map(([name, description]) => ({
+			name,
+			// Harper writes these in Markdown; the options page shows plain text.
+			description: description.replace(/[`*_]/g, ''),
+			// `null` means "Harper's default", which for a listed rule is on.
+			enabled: config[name] ?? true,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Warm the WASM up so the first real keystroke is not the one that pays for it. */
@@ -109,7 +139,21 @@ export async function lint(text: string): Promise<Issue[]> {
 	return issues;
 }
 
-/** Called when settings change, since cached issues were produced under the old ones. */
-export function invalidateCache(): void {
+/**
+ * Called when settings change. Cached issues always go, since they were
+ * produced under the old settings. The linter itself only has to be rebuilt
+ * when something baked into the instance changed — adding a word to the
+ * dictionary is filtered at the boundary and does not need a new one.
+ */
+export function invalidate(previous: Settings, next: Settings): void {
 	cache.clear();
+
+	const rebuild =
+		previous.dialect !== next.dialect ||
+		JSON.stringify(previous.rules) !== JSON.stringify(next.rules);
+
+	if (rebuild) {
+		linter = undefined;
+		linterDialect = undefined;
+	}
 }

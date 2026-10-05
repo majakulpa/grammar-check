@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { crx } from '@crxjs/vite-plugin';
 import manifest from './src/manifest';
@@ -10,5 +11,10 @@ export default defineConfig({
 		target: 'chrome120',
 		// Harper's WASM is large; the default 500kB warning is pure noise here.
 		chunkSizeWarningLimit: 4000,
+	},
+	test: {
+		// `tests/e2e` belongs to Playwright, which drives a real browser with the
+		// built extension loaded. Vitest cannot run those.
+		include: ['tests/*.test.ts'],
 	},
 });

@@ -1,6 +1,6 @@
-import type { Request, Response } from '../shared/protocol';
+import { DEFAULT_SETTINGS, type Request, type Response, type Settings } from '../shared/protocol';
 import { rewrite } from './ai';
-import { invalidateCache, lint, warmUp } from './linter';
+import { invalidate, lint, listRules, warmUp } from './linter';
 import { getSettings } from './settings';
 import { synonyms } from './thesaurus';
 
@@ -8,6 +8,8 @@ async function handle(request: Request): Promise<Response> {
 	switch (request.type) {
 		case 'lint':
 			return { type: 'lint', issues: await lint(request.text) };
+		case 'getRules':
+			return { type: 'rules', rules: await listRules() };
 		case 'synonyms':
 			return { type: 'synonyms', words: await synonyms(request.word) };
 		case 'rewrite':
@@ -30,9 +32,23 @@ chrome.runtime.onMessage.addListener((request: Request, _sender, sendResponse) =
 	return true;
 });
 
-// Cached issues were produced under the old dialect and dictionary.
+// Content scripts hold a port open while a field is focused. Accepting it is
+// all that is needed: an open port with traffic on it is what stops Chrome
+// evicting this worker and throwing away the compiled WASM.
+chrome.runtime.onConnect.addListener((port) => {
+	if (port.name !== 'keep-alive') return;
+	port.onMessage.addListener(() => {});
+});
+
 chrome.storage.local.onChanged.addListener((changes) => {
-	if (changes.settings) invalidateCache();
+	const change = changes.settings;
+	if (!change) return;
+
+	const read = (value: unknown): Settings => ({
+		...DEFAULT_SETTINGS,
+		...(value as Partial<Settings> | undefined),
+	});
+	invalidate(read(change.oldValue), read(change.newValue));
 });
 
 // Compiling the WASM takes long enough to be felt on the first keystroke, so

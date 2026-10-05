@@ -103,3 +103,44 @@ button {
 	color: var(--muted);
 	font-size: 13px;
 }
+
+.rules {
+	max-height: 320px;
+	margin-top: 10px;
+	overflow-y: auto;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+}
+
+.rule {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 9px 12px;
+	border-bottom: 1px solid var(--line);
+}
+
+.rule:last-child {
+	border-bottom: 0;
+}
+
+.rule input {
+	flex: 0 0 auto;
+	margin-top: 2px;
+}
+
+.rule-text strong {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.rule-text span {
+	color: var(--muted);
+	font-size: 12px;
+}
+
+.rules-empty {
+	padding: 12px;
+	color: var(--muted);
+}

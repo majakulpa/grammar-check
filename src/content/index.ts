@@ -1,9 +1,10 @@
-import { editFor, send, type Issue, type Settings } from '../shared/protocol';
-import { SuggestionCard, matchCase } from './card';
+import { DEFAULT_SETTINGS, editFor, send, type Issue, type Settings } from '../shared/protocol';
+import { SuggestionCard } from './card';
 import { HighlightRenderer } from './render/highlights';
 import { OverlayRenderer } from './render/overlay';
 import { SUPPORTS_HIGHLIGHTS } from './source/types';
 import { isCheckable, sourceFor, type SourceElement } from './source';
+import { holdWorkerAwake, releaseWorker } from './keepAlive';
 import { findRepetitions } from './repetition';
 import { sentenceAround } from './sentences';
 
@@ -42,7 +43,8 @@ const card = new SuggestionCard({
 		void addToDictionary(word);
 	},
 	onReplaceWord(issue, word) {
-		applyToField(issue.start, issue.end, matchCase(issue.original, word));
+		// The card already matched the original's capitalisation.
+		applyToField(issue.start, issue.end, word);
 	},
 	sentenceFor(issue) {
 		return source ? sentenceAround(source.getText(), issue.start) : null;
@@ -61,22 +63,36 @@ function applyToField(start: number, end: number, replacement: string): void {
 async function addToDictionary(word: string): Promise<void> {
 	const current = settings ?? (await loadSettings());
 	const dictionary = [...new Set([...current.dictionary, word])];
-	await chrome.storage.local.set({ settings: { ...current, dictionary } });
 	settings = { ...current, dictionary };
+	await chrome.storage.local.set({ settings });
 	scheduleCheck();
 }
 
-async function loadSettings(): Promise<Settings> {
-	const response = await send({ type: 'getSettings' });
-	if (response.type !== 'settings') throw new Error('Could not load settings');
-	settings = response.settings;
-	card.setApiKeyAvailable(Boolean(response.settings.anthropicApiKey));
-	return response.settings;
+/**
+ * Shared across concurrent callers so a burst of focus events makes one
+ * request, and cleared on failure so the next call retries rather than
+ * leaving the tab permanently inert.
+ */
+let pending: Promise<Settings> | undefined;
+
+function loadSettings(): Promise<Settings> {
+	pending ??= send({ type: 'getSettings' })
+		.then((response) => {
+			if (response.type !== 'settings') throw new Error('Could not load settings');
+			settings = response.settings;
+			card.setApiKeyAvailable(Boolean(response.settings.anthropicApiKey));
+			return response.settings;
+		})
+		.catch((error: unknown) => {
+			pending = undefined;
+			throw error;
+		});
+	return pending;
 }
 
-function isActive(): boolean {
-	if (!settings?.enabled) return false;
-	return !settings.disabledHosts.includes(location.hostname);
+function isActive(current: Settings): boolean {
+	if (!current.enabled) return false;
+	return !current.disabledHosts.includes(location.hostname);
 }
 
 function paint(): void {
@@ -103,7 +119,12 @@ function clearAll(): void {
 }
 
 async function check(): Promise<void> {
-	if (!source || !isActive()) return;
+	if (!source) return;
+
+	// A field can be focused before the first settings round-trip finishes.
+	// Awaiting here is what stops that race from silently disabling the tab.
+	const current = settings ?? (await loadSettings().catch(() => undefined));
+	if (!current || !isActive(current)) return;
 
 	const text = source.getText();
 	if (text.length < MIN_LENGTH || text.length > MAX_LENGTH) {
@@ -159,6 +180,7 @@ function focusField(element: HTMLElement): void {
 
 	clearAll();
 	source = next;
+	holdWorkerAwake();
 	scheduleCheck();
 }
 
@@ -167,6 +189,19 @@ document.addEventListener(
 	(event) => {
 		const target = event.target;
 		if (target instanceof HTMLElement && isCheckable(target)) focusField(target);
+	},
+	true,
+);
+
+document.addEventListener(
+	'focusout',
+	(event) => {
+		if (event.target !== source?.element) return;
+		// Let the worker shut down once the user has left the field, but not so
+		// eagerly that clicking into the suggestion card costs a cold start.
+		setTimeout(() => {
+			if (document.activeElement !== source?.element) releaseWorker();
+		}, 5_000);
 	},
 	true,
 );
@@ -212,13 +247,26 @@ document.addEventListener('keydown', (event) => {
 
 chrome.storage.local.onChanged.addListener((changes) => {
 	if (!changes.settings) return;
-	settings = changes.settings.newValue as Settings;
+
+	// `newValue` is absent when settings are removed or storage is cleared, so
+	// fall back to the defaults rather than dropping `undefined` into state the
+	// rest of this file assumes is populated.
+	settings = {
+		...DEFAULT_SETTINGS,
+		...(changes.settings.newValue as Partial<Settings> | undefined),
+	};
 	card.setApiKeyAvailable(Boolean(settings.anthropicApiKey));
-	if (!isActive()) clearAll();
-	else scheduleCheck();
+	if (isActive(settings)) scheduleCheck();
+	else clearAll();
 });
 
 void loadSettings().then(() => {
+	const active = document.activeElement;
+	if (active instanceof HTMLElement && isCheckable(active)) focusField(active);
+});
+
+// A field focused during page load would otherwise wait for the next keystroke.
+document.addEventListener('DOMContentLoaded', () => {
 	const active = document.activeElement;
 	if (active instanceof HTMLElement && isCheckable(active)) focusField(active);
 });

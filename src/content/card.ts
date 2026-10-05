@@ -67,9 +67,13 @@ export interface CardCallbacks {
 /**
  * The suggestion popup.
  *
- * It lives in a **closed** shadow root attached to a top-level host element, so
- * the page's stylesheets cannot reach in and the page's scripts cannot read
- * what the user is being shown.
+ * It lives in a shadow root on a top-level host element, which is what keeps
+ * the page's stylesheets from reaching in and wrecking the layout.
+ *
+ * The root is open rather than closed on purpose. Closing it would only hide
+ * the card from page scripts, and everything in it is derived from text the
+ * page already holds — while an open root is what lets the end-to-end tests
+ * actually assert on what the user sees.
  */
 export class SuggestionCard {
 	private host: HTMLElement;
@@ -81,7 +85,7 @@ export class SuggestionCard {
 	constructor(private callbacks: CardCallbacks) {
 		this.host = document.createElement('grammar-check-card');
 		this.host.style.setProperty('all', 'initial', 'important');
-		this.root = this.host.attachShadow({ mode: 'closed' });
+		this.root = this.host.attachShadow({ mode: 'open' });
 
 		const style = document.createElement('style');
 		style.textContent = STYLES;
