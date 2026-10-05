@@ -1,0 +1,105 @@
+:root {
+	color-scheme: light dark;
+	--bg: #fff;
+	--fg: #16181d;
+	--muted: #6b7280;
+	--line: rgba(0, 0, 0, 0.12);
+	--field: #f6f7f9;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #16181d;
+		--fg: #e8eaed;
+		--muted: #a8aeb8;
+		--line: rgba(255, 255, 255, 0.14);
+		--field: #22262c;
+	}
+}
+
+body {
+	margin: 0;
+	padding: 32px 20px 64px;
+	background: var(--bg);
+	color: var(--fg);
+	font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+main {
+	max-width: 560px;
+	margin: 0 auto;
+}
+
+h1 {
+	margin: 0 0 24px;
+	font-size: 20px;
+}
+
+h2 {
+	margin: 0 0 8px;
+	font-size: 14px;
+}
+
+section {
+	padding: 20px 0;
+	border-top: 1px solid var(--line);
+}
+
+.note {
+	margin: 0 0 12px;
+	color: var(--muted);
+	font-size: 13px;
+}
+
+.field {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 10px;
+}
+
+input,
+select,
+textarea {
+	flex: 1 1 320px;
+	min-width: 0;
+	padding: 7px 9px;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--field);
+	color: inherit;
+	font: inherit;
+}
+
+textarea {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	resize: vertical;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 13px;
+}
+
+footer {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 24px;
+}
+
+button {
+	padding: 8px 18px;
+	border: 0;
+	border-radius: 6px;
+	background: var(--fg);
+	color: var(--bg);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+#status {
+	color: var(--muted);
+	font-size: 13px;
+}

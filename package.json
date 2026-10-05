@@ -1,0 +1,29 @@
+{
+  "name": "grammar-check",
+  "version": "0.1.0",
+  "description": "A local-first Chrome extension for grammar, style and synonym suggestions on any website.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "harper.js": "^2.10.0",
+    "lru-cache": "^11.1.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.3.0",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^26.6.4",
+    "jsdom": "^30.1.2",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.0"
+  }
+}

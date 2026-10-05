@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Grammar Check — test page</title>
+		<style>
+			:root { color-scheme: light dark; }
+			body {
+				max-width: 720px;
+				margin: 0 auto;
+				padding: 40px 20px 120px;
+				font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+			}
+			h1 { font-size: 22px; }
+			h2 { margin-top: 36px; font-size: 15px; }
+			p.note { color: #6b7280; font-size: 13px; }
+			textarea, input, .editable {
+				width: 100%;
+				box-sizing: border-box;
+				padding: 10px 12px;
+				border: 1px solid rgba(128, 128, 128, 0.4);
+				border-radius: 8px;
+				background: transparent;
+				color: inherit;
+				font: inherit;
+			}
+			textarea { min-height: 140px; resize: vertical; }
+			.editable { min-height: 140px; }
+			.editable p { margin: 0 0 1em; }
+			.scroller {
+				max-height: 120px;
+				overflow: auto;
+				border: 1px solid rgba(128, 128, 128, 0.4);
+				border-radius: 8px;
+				padding: 10px 12px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Grammar Check test page</h1>
+		<p class="note">
+			Every field below holds text with deliberate mistakes. Click into one and the
+			extension should underline problems and offer a card at the caret.
+		</p>
+
+		<h2>1. textarea</h2>
+		<textarea>
+Their going to the conference next week, and I think its going to be alot of fun. The team have been working on this presentation for month's. We should of practiced more, but we didnt have time.</textarea
+		>
+
+		<h2>2. input</h2>
+		<input
+			type="text"
+			value="This sentance has a obvious speling mistake in it."
+		/>
+
+		<h2>3. contenteditable</h2>
+		<div class="editable" contenteditable="true">
+			<p>
+				The report is important because it covers important findings about important
+				customer segments. Each important section was reviewed carefully.
+			</p>
+			<p>
+				Me and him went to the store yesterday. We was looking for a new printer, but
+				the store were closed.
+			</p>
+		</div>
+
+		<h2>4. Scrolling container</h2>
+		<p class="note">Checks that underlines stay put when the field scrolls inside a box.</p>
+		<div class="scroller">
+			<div class="editable" contenteditable="true" style="border: 0; padding: 0">
+				<p>Its a long document. Your going to need to scroll to see all of it.</p>
+				<p>The quick brown fox jumps over the lazy dog, repeatedly and repeatedly.</p>
+				<p>Alot of people make this mistake. Alot of them never notice.</p>
+				<p>Between you and I, this sentence is wrong in a way thats easy to miss.</p>
+				<p>Irregardless of what you think, that word is not standard English.</p>
+			</div>
+		</div>
+
+		<h2>5. Fields that should be left alone</h2>
+		<p class="note">A password and an email field — no underlines expected.</p>
+		<input type="password" value="hunter2" />
+		<input type="email" value="not.a.sentance@example.com" style="margin-top: 8px" />
+	</body>
+</html>

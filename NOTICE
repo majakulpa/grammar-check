@@ -1,0 +1,12 @@
+grammar-check
+Copyright (c) 2026 Maja Kulpa
+
+This product bundles Harper, the grammar engine, as a WebAssembly binary:
+
+  Harper — https://github.com/Automattic/harper
+  Copyright (c) Automattic, Inc. and contributors
+  Licensed under the Apache License, Version 2.0
+  https://www.apache.org/licenses/LICENSE-2.0
+
+Synonym lookups use the Datamuse API (https://api.datamuse.com), which is free
+for non-commercial use and requires no API key.

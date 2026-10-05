@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Grammar Check — Settings</title>
+		<link rel="stylesheet" href="./style.css" />
+	</head>
+	<body>
+		<main>
+			<h1>Grammar Check</h1>
+
+			<section>
+				<h2>Language</h2>
+				<label class="field">
+					<span>Dialect</span>
+					<select id="dialect">
+						<option value="American">American English</option>
+						<option value="British">British English</option>
+						<option value="Australian">Australian English</option>
+						<option value="Canadian">Canadian English</option>
+					</select>
+				</label>
+			</section>
+
+			<section>
+				<h2>AI rewrites</h2>
+				<p class="note">
+					Optional. Everything else works offline; rewrites send the selected sentence to
+					Anthropic using your own API key. Leave this blank and the feature stays hidden.
+				</p>
+				<label class="field">
+					<span>Anthropic API key</span>
+					<input id="api-key" type="password" placeholder="sk-ant-…" autocomplete="off" />
+				</label>
+				<label class="field">
+					<span>Model</span>
+					<select id="model">
+						<option value="claude-opus-5-5">Claude Opus 5.5 — best quality</option>
+						<option value="claude-sonnet-5-5">Claude Sonnet 5.5 — faster, cheaper</option>
+						<option value="claude-haiku-4-5">Claude Haiku 4.5 — fastest, cheapest</option>
+					</select>
+				</label>
+			</section>
+
+			<section>
+				<h2>Personal dictionary</h2>
+				<p class="note">One word per line. These are never flagged as misspellings.</p>
+				<textarea id="dictionary" rows="6" spellcheck="false"></textarea>
+			</section>
+
+			<section>
+				<h2>Disabled sites</h2>
+				<p class="note">One hostname per line.</p>
+				<textarea id="disabled-hosts" rows="4" spellcheck="false"></textarea>
+			</section>
+
+			<footer>
+				<button id="save">Save</button>
+				<span id="status" role="status"></span>
+			</footer>
+		</main>
+
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>
