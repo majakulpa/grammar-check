@@ -35,6 +35,9 @@ test.describe('the options page', () => {
 
 	test('saves the dialect and personal dictionary', async ({ page, extensionId }) => {
 		await page.goto(optionsUrl(extensionId));
+		// The form is populated asynchronously; editing before that is the bug
+		// this page used to have, not something to race here.
+		await expect(page.locator('body[data-ready]')).toBeAttached();
 
 		await page.locator('#dialect').selectOption('British');
 		await page.locator('#dictionary').fill('majakulpa\nwidgetise');

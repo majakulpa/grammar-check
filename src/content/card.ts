@@ -150,7 +150,9 @@ export class SuggestionCard {
 			const button = document.createElement('button');
 			button.className = 'primary';
 			button.textContent =
-				suggestion.kind === 'remove' ? 'Delete' : suggestion.text || '(blank)';
+				suggestion.label ??
+				(suggestion.kind === 'remove' ? 'Delete' : suggestion.text || '(blank)');
+			if (suggestion.label) button.title = suggestion.text;
 			button.addEventListener('click', () => this.callbacks.onAccept(issue, suggestion));
 			actions.appendChild(button);
 		}

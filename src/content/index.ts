@@ -10,6 +10,7 @@ import {
 	onGoogleDocsChanged,
 } from './googleDocs/source';
 import { holdWorkerAwake, releaseWorker } from './keepAlive';
+import { enrichReadability } from './readability';
 import { findRepetitions } from './repetition';
 import { sentenceAround } from './sentences';
 
@@ -147,7 +148,7 @@ async function check(): Promise<void> {
 	// The field may have changed while the linter was working.
 	if (source.getText() !== text) return;
 
-	issues = [...response.issues, ...findRepetitions(text)]
+	issues = [...response.issues.map(enrichReadability), ...findRepetitions(text)]
 		.filter((issue) => !ignored.has(ignoreKey(issue)))
 		.sort((a, b) => a.start - b.start);
 

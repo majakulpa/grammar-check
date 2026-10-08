@@ -11,6 +11,11 @@ export interface Suggestion {
 	kind: SuggestionKind;
 	/** Empty for `remove`. */
 	text: string;
+	/**
+	 * What the button should say, when the replacement text itself is too long
+	 * to be one — a whole rewritten sentence, say.
+	 */
+	label?: string;
 }
 
 /** A problem to underline, in plain-text offsets into the field's value. */

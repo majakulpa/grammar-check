@@ -14,6 +14,11 @@ const lines = (value: string): string[] =>
 		.map((line) => line.trim())
 		.filter(Boolean);
 
+// Nothing is editable until the saved values are in the form. Without this a
+// change made in the first moments is silently overwritten by the load below,
+// and Save would write back a half-populated form.
+save.disabled = true;
+
 const stored = await chrome.storage.local.get('settings');
 const settings: Settings = {
 	...DEFAULT_SETTINGS,
@@ -25,6 +30,9 @@ model.value = settings.model;
 apiKey.value = settings.anthropicApiKey ?? '';
 dictionary.value = settings.dictionary.join('\n');
 disabledHosts.value = settings.disabledHosts.join('\n');
+
+save.disabled = false;
+document.body.dataset.ready = 'true';
 
 save.addEventListener('click', async () => {
 	const key = apiKey.value.trim();
@@ -84,7 +92,12 @@ function renderRules(rules: Rule[], filter: string): void {
 			// easy to lose track of, and a toggle that needs confirming elsewhere
 			// is a toggle people think did not work.
 			toggle.addEventListener('change', async () => {
-				const stored = await chrome.storage.local.get('settings');
+				// Nothing is editable until the saved values are in the form. Without this a
+// change made in the first moments is silently overwritten by the load below,
+// and Save would write back a half-populated form.
+save.disabled = true;
+
+const stored = await chrome.storage.local.get('settings');
 				const current = { ...DEFAULT_SETTINGS, ...(stored.settings as Partial<Settings>) };
 				await chrome.storage.local.set({
 					settings: { ...current, rules: { ...current.rules, [rule.name]: toggle.checked } },
