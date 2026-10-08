@@ -12,6 +12,20 @@ async function readyInput(page: import('@playwright/test').Page) {
 	return field;
 }
 
+/** Puts the caret inside the second "important", which is flagged as repetition. */
+async function caretOnSecondImportant(editable: import('@playwright/test').Locator) {
+	await editable.evaluate((element) => {
+		const node = [...element.querySelectorAll('p')][0]!.firstChild as Text;
+		const at = node.data.indexOf('important', node.data.indexOf('important') + 1) + 3;
+		const range = document.createRange();
+		range.setStart(node, at);
+		range.collapse(true);
+		const selection = window.getSelection()!;
+		selection.removeAllRanges();
+		selection.addRange(range);
+	});
+}
+
 test.describe('the suggestion card', () => {
 	test('opens when the caret lands on an issue', async ({ page }) => {
 		await page.goto(demoUrl);
@@ -49,6 +63,38 @@ test.describe('the suggestion card', () => {
 			.toBeGreaterThan(0);
 	});
 
+	test('stays open while you reach for it', async ({ page }) => {
+		await page.goto(demoUrl);
+		await readyInput(page);
+		await expect(card(page)).toBeVisible();
+
+		// Pressing down on the card used to pull focus out of the field, which
+		// moved the caret, which closed the card before the click landed.
+		await card(page).hover();
+		await page.mouse.down();
+		await expect(card(page)).toBeVisible();
+
+		await page.mouse.up();
+		await expect(card(page)).toBeVisible();
+	});
+
+	test('stays open when reached for in a contenteditable', async ({ page }) => {
+		await page.goto(demoUrl);
+
+		const editable = page.locator('.editable').first();
+		await editable.click();
+		await expect.poll(async () => (await underlines(page)).repetition).toBeGreaterThan(0);
+
+		await caretOnSecondImportant(editable);
+		await expect(card(page)).toBeVisible();
+
+		await card(page).hover();
+		await page.mouse.down();
+		await expect(card(page)).toBeVisible();
+		await page.mouse.up();
+		await expect(card(page)).toBeVisible();
+	});
+
 	test('hides on Escape', async ({ page }) => {
 		await page.goto(demoUrl);
 		await readyInput(page);
@@ -65,17 +111,7 @@ test.describe('the suggestion card', () => {
 		await editable.click();
 		await expect.poll(async () => (await underlines(page)).repetition).toBeGreaterThan(0);
 
-		// Put the caret inside the second "important", which is a repetition.
-		await editable.evaluate((element) => {
-			const node = [...element.querySelectorAll('p')][0]!.firstChild as Text;
-			const at = node.data.indexOf('important', node.data.indexOf('important') + 1) + 3;
-			const range = document.createRange();
-			range.setStart(node, at);
-			range.collapse(true);
-			const selection = window.getSelection()!;
-			selection.removeAllRanges();
-			selection.addRange(range);
-		});
+		await caretOnSecondImportant(editable);
 
 		await expect(card(page)).toContainText(/repeated word/i);
 		await expect(card(page)).toContainText(/synonyms/i);

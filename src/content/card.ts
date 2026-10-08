@@ -87,6 +87,13 @@ export class SuggestionCard {
 		this.host.style.setProperty('all', 'initial', 'important');
 		this.root = this.host.attachShadow({ mode: 'open' });
 
+		// Pressing the mouse down inside the card would otherwise pull focus out
+		// of the text field, which moves the caret, which closes the card — so
+		// the card vanished the moment you reached for it. Blocking the default
+		// leaves focus and the selection exactly where they were; buttons still
+		// get their click.
+		this.host.addEventListener('mousedown', (event) => event.preventDefault());
+
 		const style = document.createElement('style');
 		style.textContent = STYLES;
 		this.root.appendChild(style);
@@ -100,9 +107,19 @@ export class SuggestionCard {
 		return this.issue;
 	}
 
-	/** True when the event happened inside the card, so callers can ignore it. */
+	/**
+	 * True when the event happened inside the card, so callers can ignore it.
+	 *
+	 * Events crossing a shadow boundary are retargeted to the host, so a click
+	 * on a button arrives here as the host element itself.
+	 */
 	contains(target: EventTarget | null): boolean {
 		return target instanceof Node && this.host.contains(target);
+	}
+
+	/** Whether the card is currently on screen. */
+	get isOpen(): boolean {
+		return this.card !== undefined;
 	}
 
 	hide(): void {

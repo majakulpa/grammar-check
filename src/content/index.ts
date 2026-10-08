@@ -227,6 +227,9 @@ document.addEventListener(
 // hide an issue. `selectionchange` covers arrow keys, clicks and programmatic
 // moves in one listener.
 document.addEventListener('selectionchange', () => {
+	// Reaching into the card can still move the selection on some editors.
+	// While it is open and holds focus, the caret is not the user navigating.
+	if (card.isOpen && card.contains(document.activeElement)) return;
 	if (source) syncCard();
 });
 
