@@ -27,8 +27,24 @@ function extensionCSP(dev: boolean): string {
 	].join('; ');
 }
 
+/**
+ * Pins the extension's ID.
+ *
+ * Without this an unpacked extension's ID is derived from its install path, so
+ * it differs per machine. Google Docs hands its text to whichever extension ID
+ * claimed `_docs_annotate_canvas_by_ext`, and that claim is made by a script in
+ * the page's own world where no `chrome` API exists — so the ID has to be a
+ * constant we can bake into that script at build time.
+ */
+const PUBLIC_KEY =
+	'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqN/CfdBRzhOHYLbUNbT6KHOQn1Rht7bbVjNV3QB6izIGcohD1bT4iVnFAfsw3XAqC4Fz+121UJeKTa6N8PTcdzLg7Ghvz1BKcUg1M7jYGL5GNyG/i1bYWc2Dqt9rqAfniq3v7+Z9C/Dmwy/vSCHxpxPflDRII3BdYHBwS5rUclfRv2QAMhFRDS/Rm4bjMojiqLl5vxwr8fthI6tiluPxvkhHZoTdkUaRl7/VD/3L1+RGy8azF+LiRlgWQCoVYCIKCQVcHvPrsY0zuD7KfErQz96rbuKp4h1u0SiIwHjvO5iQpE78XDdg7wuUtU+LX47OoSh53vVsuX48Q2MAjhxifQIDAQAB';
+
+/** Must match the ID that `PUBLIC_KEY` produces. See `scripts/extension-id.mjs`. */
+export const EXTENSION_ID = 'gihlmnljmjmaonjdlcmnfpjphchekpgm';
+
 export default defineManifest({
 	manifest_version: 3,
+	key: PUBLIC_KEY,
 	name: `Grammar Check${isDev ? ' (dev)' : ''}`,
 	description: pkg.description,
 	version: pkg.version,
@@ -47,6 +63,24 @@ export default defineManifest({
 		type: 'module',
 	},
 	content_scripts: [
+		{
+			// Must land before Docs boots, and in the page's own world, or the
+			// annotation hook is never offered to us.
+			matches: ['https://docs.google.com/document/*'],
+			js: ['src/content/googleDocs/bootstrap.ts'],
+			run_at: 'document_start',
+			world: 'MAIN',
+			all_frames: false,
+		},
+		{
+			// The bridge also runs in the page's world — it is the only place
+			// Docs' own objects are reachable — but after Docs has built itself.
+			matches: ['https://docs.google.com/document/*'],
+			js: ['src/content/googleDocs/bridge.ts'],
+			run_at: 'document_idle',
+			world: 'MAIN',
+			all_frames: false,
+		},
 		{
 			matches: ['<all_urls>'],
 			all_frames: true,

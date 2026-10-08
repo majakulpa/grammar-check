@@ -6,3 +6,4 @@ dist/
 *.zip
 test-results/
 playwright-report/
+.try-profile/

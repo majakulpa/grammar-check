@@ -4,6 +4,11 @@ import { HighlightRenderer } from './render/highlights';
 import { OverlayRenderer } from './render/overlay';
 import { SUPPORTS_HIGHLIGHTS } from './source/types';
 import { isCheckable, sourceFor, type SourceElement } from './source';
+import {
+	GoogleDocsSource,
+	findGoogleDocsEditor,
+	onGoogleDocsChanged,
+} from './googleDocs/source';
 import { holdWorkerAwake, releaseWorker } from './keepAlive';
 import { findRepetitions } from './repetition';
 import { sentenceAround } from './sentences';
@@ -260,6 +265,30 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	else clearAll();
 });
 
+/**
+ * Google Docs never gives us a text field, so it cannot arrive through
+ * `focusin` like every other surface. The editor is adopted as the source and
+ * polled instead: Docs reports no input events we can rely on, and the bridge
+ * that reads it runs as its own content script in the page's world.
+ */
+function startGoogleDocs(): void {
+	const editor = findGoogleDocsEditor();
+	if (!editor) return;
+
+	const docs = new GoogleDocsSource(editor);
+	source = docs;
+	holdWorkerAwake();
+
+	const sync = async () => {
+		if (await docs.refresh()) scheduleCheck();
+	};
+
+	onGoogleDocsChanged(() => void sync());
+	// Typing changes nothing in the DOM we can observe, so this is the floor.
+	setInterval(() => void sync(), 1500);
+	void sync();
+}
+
 void loadSettings().then(() => {
 	const active = document.activeElement;
 	if (active instanceof HTMLElement && isCheckable(active)) focusField(active);
@@ -270,3 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
 	const active = document.activeElement;
 	if (active instanceof HTMLElement && isCheckable(active)) focusField(active);
 });
+
+// Docs builds its editor well after load, so wait for it to appear.
+if (location.hostname === 'docs.google.com') {
+	const waitForEditor = setInterval(() => {
+		if (!findGoogleDocsEditor()) return;
+		clearInterval(waitForEditor);
+		startGoogleDocs();
+	}, 500);
+	setTimeout(() => clearInterval(waitForEditor), 60_000);
+}
