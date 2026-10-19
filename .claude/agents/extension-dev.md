@@ -48,12 +48,34 @@ offsets.ts` maps those onto DOM positions and is unit-tested, because an
 off-by-one there puts every underline in the wrong place. Change it only with
 tests.
 
+## Accessibility is part of the work, not a pass at the end
+
+The target is WCAG 2.2 AA and it is enforced by tests. Two rules carry the
+reasoning and are easy to undo by accident:
+
+- **The card must never take focus on its own.** An issue appears while the
+  user is still typing; grabbing the caret then is an interruption, not help.
+  `Alt+Enter` is the way in, and the card announces itself through a live
+  region in the meantime.
+- **The settings' checks list must stay a single tab stop.** There are hundreds
+  of checkboxes; leaving them all in the tab order makes everything below the
+  list unreachable in practice. Arrow keys move within it.
+
+Colours live in two sets for a reason: underlines are graphics and need 3:1
+against somebody else's page, while the card's labels are text and need 4.5:1
+against the card. `tests/contrast.test.ts` checks both against the shipped
+values, so do not hard-code a colour anywhere else.
+
 ## How to verify
 
-Never claim a UI change works without running it. `npm run build`, then
-`npx playwright test`, which loads the built extension into a real Chromium and
-drives `demo/index.html`. Add a case there for anything you fix. For pure logic,
-`npm test`.
+Never claim a UI change works without running it. `npm run test:all` does the
+lot in the right order. The Playwright suite loads the built extension into a
+real Chromium and drives `demo/index.html`; add a case there for anything you
+fix, and a case to `a11y.spec.ts` or `keyboard.spec.ts` for anything that
+changes the UI's shape.
+
+Coverage is scoped and enforced in `vite.config.ts`. A new pure helper belongs
+in the measured set; do not widen the exclusion list to make a threshold pass.
 
 ## Hard limits
 

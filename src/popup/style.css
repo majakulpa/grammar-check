@@ -29,6 +29,24 @@ h1 {
 	font-size: 14px;
 }
 
+:focus-visible {
+	outline: 2px solid #0b57d0;
+	outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:focus-visible {
+		outline-color: #a8c7fa;
+	}
+}
+
+/* Keep the card's edges visible under Windows High Contrast. */
+@media (forced-colors: active) {
+	:focus-visible {
+		outline: 2px solid Highlight;
+	}
+}
+
 .row {
 	display: flex;
 	align-items: center;
@@ -47,4 +65,10 @@ h1 {
 	font: inherit;
 	text-decoration: underline;
 	cursor: pointer;
+}
+
+/* `--muted` is 4.83:1 on white, which clears AA, but a control the user
+   clicks reads better at full strength. */
+.link {
+	color: var(--fg);
 }

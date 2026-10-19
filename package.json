@@ -11,7 +11,11 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"try": "node scripts/try.mjs"
+		"try": "node scripts/try.mjs",
+		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test",
+		"test:a11y": "playwright test a11y.spec.ts keyboard.spec.ts",
+		"test:all": "npm run typecheck && npm run test:coverage && npm run build && npm run test:e2e"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.131.0",
@@ -19,10 +23,13 @@
 		"lru-cache": "^11.1.0"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.14.0",
 		"@crxjs/vite-plugin": "^2.3.0",
 		"@playwright/test": "^1.63.0",
 		"@types/chrome": "^0.0.287",
 		"@types/node": "^26.6.4",
+		"@vitest/coverage-v8": "^2.1.9",
+		"axe-core": "^4.14.0",
 		"jsdom": "^30.1.2",
 		"typescript": "^5.6.0",
 		"vite": "^5.4.10",

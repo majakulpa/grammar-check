@@ -1,5 +1,6 @@
 import { send, type Issue, type RewriteTone, type Suggestion } from '../shared/protocol';
-import { SEVERITY_COLORS, severityOf } from './render/styles';
+import { SEVERITY_TEXT_COLORS, severityOf } from './render/styles';
+import { matchCase } from './textCase';
 
 const TONES: { tone: RewriteTone; label: string }[] = [
 	{ tone: 'clearer', label: 'Clearer' },
@@ -37,12 +38,33 @@ button {
 	cursor: pointer;
 }
 button:hover { background: #ebedf0; }
+button:focus-visible { outline: 2px solid #0b57d0; outline-offset: 2px; }
 button.primary { background: #16181d; border-color: #16181d; color: #fff; }
 button.primary:hover { background: #2c3038; }
 .section { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 0, 0, 0.08); }
 .label { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 6px; }
 .note { color: #6b7280; font-style: italic; }
 .rewrite { margin-top: 8px; padding: 8px; border-radius: 6px; background: #f6f7f9; }
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+.hint { margin-top: 10px; color: #6b7280; font-size: 11px; }
+.card:focus-visible { outline: 2px solid #0b57d0; outline-offset: 2px; }
+
+/* Windows High Contrast and similar: let the system palette through, but keep
+   the card's edges visible — without a border it dissolves into the page. */
+@media (forced-colors: active) {
+	.card { border: 1px solid CanvasText; }
+	button:focus-visible { outline: 2px solid Highlight; }
+}
+
 @media (prefers-color-scheme: dark) {
 	.card { background: #1c1f24; color: #e8eaed; border-color: rgba(255, 255, 255, 0.12); }
 	.message { color: #a8aeb8; }
@@ -51,6 +73,8 @@ button.primary:hover { background: #2c3038; }
 	button.primary { background: #e8eaed; border-color: #e8eaed; color: #16181d; }
 	.rewrite { background: #2a2e35; }
 	.section { border-top-color: rgba(255, 255, 255, 0.1); }
+	.hint { color: #a8aeb8; }
+	button:focus-visible { outline-color: #a8c7fa; }
 }
 `;
 
@@ -79,14 +103,26 @@ export class SuggestionCard {
 	private host: HTMLElement;
 	private root: ShadowRoot;
 	private card?: HTMLElement;
+	private announcer: HTMLElement;
 	private issue?: Issue;
 	private hasApiKey = false;
 	private hovered = false;
+	/** Where focus came from, so Escape can put it back. */
+	private returnFocusTo?: HTMLElement;
 
 	constructor(private callbacks: CardCallbacks) {
 		this.host = document.createElement('grammar-check-card');
 		this.host.style.setProperty('all', 'initial', 'important');
 		this.root = this.host.attachShadow({ mode: 'open' });
+
+		// Announces that a suggestion is available without moving focus. Taking
+		// focus the moment an issue appears would interrupt someone mid-sentence,
+		// so the card waits to be asked for — see `focus()`.
+		this.announcer = document.createElement('div');
+		this.announcer.setAttribute('aria-live', 'polite');
+		this.announcer.setAttribute('role', 'status');
+		this.announcer.className = 'sr-only';
+		this.root.appendChild(this.announcer);
 
 		// Pressing the mouse down inside the card would otherwise pull focus out
 		// of the text field, which moves the caret, which closes the card — so
@@ -99,6 +135,8 @@ export class SuggestionCard {
 		// the page does in the background should take it away from them.
 		this.host.addEventListener('pointerenter', () => (this.hovered = true));
 		this.host.addEventListener('pointerleave', () => (this.hovered = false));
+
+		this.host.addEventListener('keydown', (event) => this.onKeyDown(event));
 
 		const style = document.createElement('style');
 		style.textContent = STYLES;
@@ -133,8 +171,40 @@ export class SuggestionCard {
 		return this.hovered && this.card !== undefined;
 	}
 
+	/** Arrow keys walk the actions; Escape closes and hands focus back. */
+	private onKeyDown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			const returnTo = this.returnFocusTo;
+			this.hide();
+			returnTo?.focus();
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
+		const keys = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'];
+		if (!keys.includes(event.key)) return;
+
+		const buttons = [...this.root.querySelectorAll<HTMLButtonElement>('button')];
+		if (buttons.length === 0) return;
+
+		const current = buttons.indexOf(this.root.activeElement as HTMLButtonElement);
+		const forward = event.key === 'ArrowDown' || event.key === 'ArrowRight';
+		const next =
+			event.key === 'Home' ? 0
+			: event.key === 'End' ? buttons.length - 1
+			: current === -1 ? 0
+			// Wrapping keeps every action reachable from wherever you are.
+			: (current + (forward ? 1 : -1) + buttons.length) % buttons.length;
+
+		buttons[next]?.focus();
+		event.preventDefault();
+	}
+
 	hide(): void {
 		this.hovered = false;
+		this.returnFocusTo = undefined;
+		this.announcer.textContent = '';
 		this.issue = undefined;
 		this.card?.remove();
 		this.card = undefined;
@@ -146,11 +216,17 @@ export class SuggestionCard {
 
 		const card = document.createElement('div');
 		card.className = 'card';
+		card.setAttribute('role', 'dialog');
+		card.setAttribute('aria-label', `${issue.kindLabel || issue.kind}: ${issue.message}`);
+		card.tabIndex = -1;
 
 		const severity = severityOf(issue);
 		const kind = document.createElement('div');
 		kind.className = 'kind';
-		kind.style.color = SEVERITY_COLORS[severity];
+		// The two themes need different colours to stay readable, and a stylesheet
+		// cannot pick between them for an inline value.
+		const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+		kind.style.color = SEVERITY_TEXT_COLORS[dark ? 'dark' : 'light'][severity];
 		kind.textContent = issue.kindLabel || issue.kind;
 		card.appendChild(kind);
 
@@ -163,12 +239,43 @@ export class SuggestionCard {
 		if (issue.kind === 'Repetition') card.appendChild(this.synonymSection(issue));
 		if (this.hasApiKey) card.appendChild(this.rewriteSection(issue));
 
+		const hint = document.createElement('p');
+		hint.className = 'hint';
+		hint.textContent = 'Alt + Enter to reach these, arrows to move, Esc to dismiss.';
+		card.appendChild(hint);
+
 		this.card?.remove();
 		this.card = card;
 		this.root.appendChild(card);
 		if (!this.host.isConnected) document.body.appendChild(this.host);
 
 		this.position(card, anchor);
+
+		// Re-announcing identical text says nothing, so make each one distinct.
+		this.announcer.textContent = `${issue.kindLabel || issue.kind}. ${issue.message} Press Alt plus Enter for suggestions.`;
+	}
+
+	/**
+	 * Moves focus into the card, for people not using a mouse.
+	 *
+	 * Focus is never taken automatically: an issue appears while you are still
+	 * typing, and stealing the caret mid-word would be worse than no help at
+	 * all. The controller binds Alt+Enter to this instead.
+	 */
+	focus(): boolean {
+		if (!this.card) return false;
+
+		const active = document.activeElement;
+		this.returnFocusTo = active instanceof HTMLElement ? active : undefined;
+
+		const first = this.root.querySelector<HTMLButtonElement>('button');
+		(first ?? this.card).focus();
+		return true;
+	}
+
+	/** True when focus is inside the card right now. */
+	get hasFocus(): boolean {
+		return this.host.contains(document.activeElement) || this.root.activeElement !== null;
 	}
 
 	private suggestionRow(issue: Issue): HTMLElement {
@@ -327,9 +434,3 @@ function note(text: string): HTMLElement {
 	return element;
 }
 
-/** Keep the writer's capitalisation when swapping in a synonym. */
-export function matchCase(original: string, replacement: string): string {
-	if (original === original.toUpperCase() && original.length > 1) return replacement.toUpperCase();
-	if (/^\p{Lu}/u.test(original)) return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-	return replacement;
-}

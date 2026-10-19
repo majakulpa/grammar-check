@@ -59,6 +59,7 @@ save.addEventListener('click', async () => {
 
 const rulesContainer = document.querySelector<HTMLElement>('#rules')!;
 const ruleSearch = document.querySelector<HTMLInputElement>('#rule-search')!;
+const rulesCount = document.querySelector<HTMLElement>('#rules-count')!;
 
 function renderRules(rules: Rule[], filter: string): void {
 	const needle = filter.trim().toLowerCase();
@@ -69,6 +70,11 @@ function renderRules(rules: Rule[], filter: string): void {
 					rule.description.toLowerCase().includes(needle),
 			)
 		: rules;
+
+	// Filtering changes the list silently for anyone not looking at it.
+	rulesCount.textContent = needle
+		? `${matching.length} of ${rules.length} checks shown`
+		: `${rules.length} checks`;
 
 	if (matching.length === 0) {
 		rulesContainer.replaceChildren(
@@ -88,6 +94,10 @@ function renderRules(rules: Rule[], filter: string): void {
 			const toggle = document.createElement('input');
 			toggle.type = 'checkbox';
 			toggle.checked = rule.enabled;
+			// The list runs to hundreds of checks. Leaving each one in the tab
+			// order would make everything below this section unreachable in
+			// practice, so the list is a single stop and the arrows move inside.
+			toggle.tabIndex = -1;
 			// Written straight through rather than on Save: a list this long is
 			// easy to lose track of, and a toggle that needs confirming elsewhere
 			// is a toggle people think did not work.
@@ -117,6 +127,35 @@ const stored = await chrome.storage.local.get('settings');
 		}),
 	);
 }
+
+/** Checkboxes in the list, in the order they are shown. */
+function ruleToggles(): HTMLInputElement[] {
+	return [...rulesContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+}
+
+/**
+ * Arrow-key navigation within the checks.
+ *
+ * Tab reaches the list; the arrows move through it; Tab again leaves it. Space
+ * still toggles, because the checkboxes are real checkboxes.
+ */
+rulesContainer.addEventListener('keydown', (event) => {
+	const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+	if (!keys.includes(event.key)) return;
+
+	const toggles = ruleToggles();
+	if (toggles.length === 0) return;
+
+	const current = toggles.indexOf(document.activeElement as HTMLInputElement);
+	const next =
+		event.key === 'Home' ? 0
+		: event.key === 'End' ? toggles.length - 1
+		: current === -1 ? 0
+		: Math.min(toggles.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1)));
+
+	toggles[next]?.focus();
+	event.preventDefault();
+});
 
 const rulesResponse = await send({ type: 'getRules' });
 if (rulesResponse.type === 'rules') {

@@ -23,37 +23,25 @@ export function severityOf(issue: Issue): Severity {
 	return ERROR_KINDS.has(issue.kind) ? 'error' : 'style';
 }
 
+/**
+ * Underline colours. These are graphics, so WCAG asks for 3:1 against what is
+ * behind them — and what is behind them is somebody else's page, which we do
+ * not control. These clear 3:1 on both white and a near-black page, which is as
+ * far as the guarantee can go.
+ *
+ * Colour is never the only cue: the card names the kind in words.
+ */
 export const SEVERITY_COLORS: Record<Severity, string> = {
 	error: '#e5484d',
-	style: '#f5a524',
+	style: '#b06c00',
 	repetition: '#8e4ec6',
 };
 
 /**
- * `::highlight()` only accepts a short list of properties — colour, background,
- * text-decoration, text-shadow — which is exactly enough for a squiggle.
- *
- * Injected into the page's own document because highlight pseudo-elements are
- * resolved against the originating tree, not a shadow root.
+ * Label colours, which are text and so need 4.5:1 — a bar the underline
+ * colours do not meet on a light background. Kept per theme for that reason.
  */
-export function injectHighlightStyles(): void {
-	const id = 'grammar-check-highlight-styles';
-	if (document.getElementById(id)) return;
-
-	const rules = (Object.entries(SEVERITY_COLORS) as [Severity, string][])
-		.map(
-			([severity, color]) => `
-::highlight(grammar-check-${severity}) {
-	text-decoration: underline wavy ${color};
-	text-decoration-skip-ink: none;
-	text-underline-offset: 0.18em;
-}`,
-		)
-		.join('\n');
-
-	const style = document.createElement('style');
-	style.id = id;
-	style.textContent = rules;
-	// `documentElement` rather than `head`: some pages replace `head` wholesale.
-	document.documentElement.appendChild(style);
-}
+export const SEVERITY_TEXT_COLORS: Record<'light' | 'dark', Record<Severity, string>> = {
+	light: { error: '#ce4145', style: '#9d6a17', repetition: '#8e4ec6' },
+	dark: { error: '#e7575b', style: '#f5a524', repetition: '#a571d1' },
+};

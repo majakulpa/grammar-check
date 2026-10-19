@@ -10,8 +10,11 @@ sentence rewrites.
 npm run build      # build to dist/ — this is what you load in Chrome
 npm run dev        # Vite dev server with HMR
 npm test           # vitest, pure logic only
+npm run test:coverage  # the same, with enforced thresholds
 npm run typecheck  # tsc --noEmit
-npx playwright test  # loads the built extension into Chromium, drives demo/index.html
+npm run test:e2e   # loads the built extension into Chromium, drives demo/index.html
+npm run test:a11y  # just the axe and keyboard suites
+npm run test:all   # everything, in the order CI would
 ```
 
 Install: `chrome://extensions` → Developer mode → Load unpacked → `dist/`.
@@ -46,6 +49,30 @@ fixture) because a fresh Chrome profile makes the worker recompile the WASM,
 which is slow enough to be flaky. Independence comes from the per-test `page`
 fixture, which clears `chrome.storage.local` before each test. If you add a
 test that needs a clean profile, give it its own context explicitly.
+
+## Accessibility
+
+The target is WCAG 2.2 AA, and it is enforced, not aspired to:
+
+- `tests/e2e/a11y.spec.ts` scans every surface with axe in both themes.
+  `expectNoViolations` fails if axe ran no checks at all, so a mis-scoped scan
+  cannot pass by matching nothing.
+- `tests/e2e/keyboard.spec.ts` covers what axe cannot: the card is reachable
+  only by `Alt+Enter`, arrow keys move within it, `Esc` returns focus.
+- `tests/contrast.test.ts` checks the palette against AA using the same
+  `src/shared/contrast.ts` the extension ships, so the assertion cannot drift
+  from what renders.
+
+Two rules worth keeping: the card must never take focus by itself, because an
+issue can appear mid-word; and the settings' checks list must stay a single tab
+stop, or everything below it becomes unreachable in practice.
+
+## Coverage
+
+`vite.config.ts` scopes coverage to the modules that can be tested without a
+browser and holds them at 90%. Everything excluded there is covered by the
+Playwright suite against the real extension instead — if you add a pure helper,
+it belongs in the measured set, not the exclusion list.
 
 ## Measured behaviour
 

@@ -17,6 +17,23 @@
 	}
 }
 
+:focus-visible {
+	outline: 2px solid #0b57d0;
+	outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:focus-visible {
+		outline-color: #a8c7fa;
+	}
+}
+
+@media (forced-colors: active) {
+	:focus-visible {
+		outline: 2px solid Highlight;
+	}
+}
+
 body {
 	margin: 0;
 	padding: 32px 20px 64px;
@@ -102,6 +119,15 @@ button {
 #status {
 	color: var(--muted);
 	font-size: 13px;
+}
+
+.stacked {
+	display: block;
+}
+
+.stacked .note {
+	display: block;
+	margin-bottom: 12px;
 }
 
 .rules {

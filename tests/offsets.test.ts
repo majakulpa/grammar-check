@@ -58,3 +58,36 @@ describe('rangeFor', () => {
 		expect(rangeFor(root, 3, 11)?.toString()).toBe('lo brave');
 	});
 });
+
+describe('edges that only come up on real pages', () => {
+	it('returns nothing for a node that is not in this field', () => {
+		const root = host('Hello');
+		const stranger = document.createTextNode('elsewhere');
+		document.body.appendChild(stranger);
+
+		expect(offsetOf(root, stranger, 0)).toBeNull();
+	});
+
+	it('returns nothing for an empty field, which has no position to point at', () => {
+		expect(positionAt(host(''), 0)).toBeNull();
+		expect(rangeFor(host(''), 0, 1)).toBeNull();
+	});
+
+	it('clamps an offset past the end rather than failing', () => {
+		const root = host('<p>One</p>');
+		const position = positionAt(root, 999);
+
+		expect(position?.node.data).toBe('One');
+		expect(position?.offset).toBe(3);
+	});
+
+	it('sees through display:contents, which generates no box', () => {
+		const root = host('<span style="display: contents">One </span>two');
+		expect(flattenText(root)).toBe('One two');
+	});
+
+	it('skips text inside a hidden element, which the writer cannot see', () => {
+		const root = host('Visible <span hidden>secret </span>text');
+		expect(flattenText(root)).toBe('Visible text');
+	});
+});

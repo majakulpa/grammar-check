@@ -1,6 +1,35 @@
 import type { Issue } from '../../shared/protocol';
 import type { SourceElement } from '../source';
-import { injectHighlightStyles, severityOf, type Severity } from './styles';
+import { SEVERITY_COLORS, severityOf, type Severity } from './styles';
+
+/**
+ * `::highlight()` only accepts a short list of properties — colour, background,
+ * text-decoration, text-shadow — which is exactly enough for a squiggle.
+ *
+ * Injected into the page's own document because highlight pseudo-elements are
+ * resolved against the originating tree, not a shadow root.
+ */
+function injectHighlightStyles(): void {
+	const id = 'grammar-check-highlight-styles';
+	if (document.getElementById(id)) return;
+
+	const rules = (Object.entries(SEVERITY_COLORS) as [Severity, string][])
+		.map(
+			([severity, color]) => `
+::highlight(grammar-check-${severity}) {
+	text-decoration: underline wavy ${color};
+	text-decoration-skip-ink: none;
+	text-underline-offset: 0.18em;
+}`,
+		)
+		.join('\n');
+
+	const style = document.createElement('style');
+	style.id = id;
+	style.textContent = rules;
+	// `documentElement` rather than `head`: some pages replace `head` wholesale.
+	document.documentElement.appendChild(style);
+}
 
 const SEVERITIES: Severity[] = ['error', 'style', 'repetition'];
 const registryName = (severity: Severity) => `grammar-check-${severity}`;

@@ -59,6 +59,36 @@ click. Without a key the feature does not appear at all.
 Click into any text field and put your cursor on an underlined word to see the
 suggestion card.
 
+## Using it without a mouse
+
+The card never takes focus on its own — an issue can appear mid-word, and
+grabbing the caret then would interrupt you rather than help. It announces
+itself to a screen reader and waits.
+
+| Key | What it does |
+|---|---|
+| `Alt` + `Enter` | Move into the suggestion card |
+| `↑` `↓` `←` `→` | Move between the card's actions |
+| `Enter` | Apply the action you are on |
+| `Esc` | Dismiss the card and return to your text |
+
+In Settings, the list of checks is a single tab stop: `Tab` reaches it, the
+arrow keys move through it, `Space` switches a check on or off. Without that,
+reaching anything below the list would mean tabbing past hundreds of
+checkboxes.
+
+## Accessibility
+
+Built to WCAG 2.2 AA, and tested against it rather than asserted:
+
+- Every surface — popup, settings, and the suggestion card — is scanned with
+  [axe-core](https://github.com/dequelabs/axe-core) in both light and dark mode.
+- Keyboard operation is covered by its own tests, because axe cannot check it.
+- Colours are checked by unit test. Underlines clear 3:1 against both a white
+  and a near-black page; the card's labels clear 4.5:1 in both themes.
+- Colour is never the only signal: the card names the kind of problem in words.
+- Focus is always visible, and the card respects Windows High Contrast.
+
 ## Settings
 
 Right-click the toolbar icon → **Options**, or open the popup and click

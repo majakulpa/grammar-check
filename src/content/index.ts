@@ -252,7 +252,7 @@ document.addEventListener(
 
 		// Rich editors emit `input` while re-rendering, not just when the user
 		// types, so this must not be what closes a card being used.
-		if (!card.isBusy) card.hide();
+		if (!card.isBusy && !card.hasFocus) card.hide();
 		scheduleCheck();
 	},
 	true,
@@ -262,9 +262,9 @@ document.addEventListener(
 // hide an issue. `selectionchange` covers arrow keys, clicks and programmatic
 // moves in one listener.
 document.addEventListener('selectionchange', () => {
-	// Reaching into the card can still move the selection on some editors.
-	// While it is open and holds focus, the caret is not the user navigating.
-	if (card.isOpen && card.contains(document.activeElement)) return;
+	// Reaching into the card, by pointer or by keyboard, is not the user
+	// navigating away from the issue.
+	if (card.isOpen && (card.hasFocus || card.isBusy)) return;
 	if (source) syncCard();
 });
 
@@ -272,6 +272,7 @@ document.addEventListener(
 	'click',
 	(event) => {
 		if (card.contains(event.target)) return;
+		if (card.hasFocus) return;
 		if (event.target === source?.element) {
 			// Let the caret settle before reading it.
 			setTimeout(syncCard, 0);
@@ -283,7 +284,18 @@ document.addEventListener(
 );
 
 document.addEventListener('keydown', (event) => {
-	if (event.key === 'Escape' && card.currentIssue) {
+	// The one way into the card without a mouse. It is not taken automatically
+	// because an issue can appear mid-word, and moving focus then would be an
+	// interruption rather than help.
+	if (event.altKey && event.key === 'Enter' && card.isOpen) {
+		if (card.focus()) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		return;
+	}
+
+	if (event.key === 'Escape' && card.currentIssue && !card.hasFocus) {
 		card.hide();
 		event.stopPropagation();
 	}

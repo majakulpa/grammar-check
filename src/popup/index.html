@@ -6,21 +6,21 @@
 		<link rel="stylesheet" href="./style.css" />
 	</head>
 	<body>
-		<header>
-			<h1>Grammar Check</h1>
-		</header>
+		<h1>Grammar Check</h1>
 
-		<label class="row">
-			<span>Checking enabled</span>
-			<input id="enabled" type="checkbox" />
-		</label>
+		<main>
+			<label class="row" for="enabled">
+				<span>Checking enabled</span>
+				<input id="enabled" type="checkbox" />
+			</label>
 
-		<label class="row">
-			<span id="site-label">Enabled on this site</span>
-			<input id="site" type="checkbox" />
-		</label>
+			<label class="row" for="site">
+				<span id="site-label">Enabled on this site</span>
+				<input id="site" type="checkbox" />
+			</label>
 
-		<button id="options" class="link">Settings…</button>
+			<button id="options" class="link">Settings…</button>
+		</main>
 
 		<script type="module" src="./main.ts"></script>
 	</body>
