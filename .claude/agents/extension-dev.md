@@ -66,6 +66,17 @@ against somebody else's page, while the card's labels are text and need 4.5:1
 against the card. `tests/contrast.test.ts` checks both against the shipped
 values, so do not hard-code a colour anywhere else.
 
+## The Google Docs tests cannot tell you Docs works
+
+`docs.spec.ts` runs against a fake page we wrote from our own reading of
+Google's undocumented hook. If that reading is wrong, the fake is wrong
+identically and the suite stays green while the real thing is broken. It
+catches regressions in our code and nothing else.
+
+`docs-live.spec.ts`, run by hand against a real document, is the only check on
+the assumption. Run it after any change under `src/content/googleDocs/`, and
+say plainly when you have not.
+
 ## How to verify
 
 Never claim a UI change works without running it. `npm run test:all` does the

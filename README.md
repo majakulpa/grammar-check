@@ -139,11 +139,27 @@ The Playwright suite loads the real built extension into Chromium and drives
 that page — it is the only thing that proves the underlines actually land where
 they should, so add a case there for anything you fix.
 
+### Testing Google Docs
+
+Docs support is covered offline by a fake page served at a real
+`docs.google.com` URL, so Chrome still injects the extension — no Google
+account needed. That catches regressions in our own code.
+
+It cannot tell you Docs support still works, because the fake is built from the
+same reading of Google's undocumented hook that the extension is. For that:
+
+```bash
+npm run docs:login    # once — sign in, in a profile kept for this
+GRAMMAR_CHECK_DOC_URL=https://docs.google.com/document/d/.../edit npm run test:docs-live
+```
+
+Use a scratch document; the test writes to it.
+
 ### Not yet done
 
-The site-compatibility pass. The extension is verified against the demo page's
-textarea, input and contenteditable, but not yet against Gmail, Google Docs,
-Notion or the big React editors, each of which has its own quirks.
+Gmail, Notion and the big React editors. The demo page covers a textarea, an
+input, a contenteditable, a scrolling container and an editor that re-renders
+underneath you, but those sites each have their own quirks.
 
 ## Licence
 

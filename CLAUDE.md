@@ -50,6 +50,24 @@ which is slow enough to be flaky. Independence comes from the per-test `page`
 fixture, which clears `chrome.storage.local` before each test. If you add a
 test that needs a clean profile, give it its own context explicitly.
 
+## Testing Google Docs
+
+Two layers, and the difference matters:
+
+- `tests/e2e/docs.spec.ts` runs against `pages/fake-google-docs.html`, served
+  at a real `docs.google.com` URL through Playwright route interception — which
+  is what makes Chrome inject the actual bootstrap and bridge. It covers the
+  hook claim, reading, underline placement, paste-based editing and the
+  staleness refusal, with no Google account.
+- `tests/e2e/docs-live.spec.ts` is opt-in and run by hand:
+  `npm run docs:login` once, then
+  `GRAMMAR_CHECK_DOC_URL=<url> npm run test:docs-live`.
+
+The fake is built from our own reading of an undocumented Google hook. If that
+reading is wrong, the fake is wrong the same way and the offline tests pass
+regardless. **Only the live test can tell you Docs support actually works** —
+run it after anything that touches `src/content/googleDocs/`.
+
 ## Accessibility
 
 The target is WCAG 2.2 AA, and it is enforced, not aspired to:

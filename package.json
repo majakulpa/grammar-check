@@ -15,7 +15,9 @@
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",
 		"test:a11y": "playwright test a11y.spec.ts keyboard.spec.ts",
-		"test:all": "npm run typecheck && npm run test:coverage && npm run build && npm run test:e2e"
+		"test:all": "npm run typecheck && npm run test:coverage && npm run build && npm run test:e2e",
+		"docs:login": "node scripts/docs-login.mjs",
+		"test:docs-live": "playwright test docs-live.spec.ts"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.131.0",

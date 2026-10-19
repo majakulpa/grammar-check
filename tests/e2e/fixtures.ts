@@ -87,3 +87,4 @@ export const test = base.extend<Record<never, never>, WorkerFixtures>({
 });
 
 export const expect = test.expect;
+export { chromium };

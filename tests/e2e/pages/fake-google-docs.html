@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Fake Google Docs</title>
+		<style>
+			body { margin: 0; font: 16px/24px monospace; }
+			/* Google's own class names, because that is what the bridge looks for. */
+			.kix-appview-editor {
+				position: relative;
+				height: 400px;
+				padding: 24px;
+				overflow: auto;
+				white-space: pre-wrap;
+			}
+			.kix-cursor-caret {
+				position: absolute;
+				width: 0;
+				height: 24px;
+				border-left: 2px solid #000;
+			}
+			.docs-texteventtarget-iframe {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				opacity: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="docs-editor">
+			<div class="kix-appview-editor">
+				<div id="painted"></div>
+				<div class="kix-cursor-caret" style="left: 24px; top: 24px"></div>
+			</div>
+		</div>
+		<iframe class="docs-texteventtarget-iframe"></iframe>
+
+		<script>
+			/*
+			 * A stand-in for Google Docs, for testing the extension's Docs support
+			 * without a Google account.
+			 *
+			 * It implements the same contract the real thing does — the
+			 * `_docs_annotate_getAnnotatedText` hook, the caret element, and a
+			 * paste target — against a monospace layout so positions are exact
+			 * and assertable.
+			 *
+			 * What this proves and what it does not: it proves the extension's
+			 * bridge, measuring and editing are self-consistent and do not
+			 * regress. It cannot prove that this is what Google actually does.
+			 * Only `docs-live.spec.ts`, run by hand against a real document, can
+			 * do that.
+			 */
+			const CHAR_WIDTH = 9.6;
+			const LINE_HEIGHT = 24;
+			const ORIGIN = { x: 24, y: 24 };
+
+			let text = 'Their going to the conference, and I think its going to be alot of fun.';
+			let selection = { start: 0, end: 0 };
+
+			const painted = document.getElementById('painted');
+			const caret = document.querySelector('.kix-cursor-caret');
+
+			/** Docs ends a paragraph with \u0003; the bridge normalises that to \n. */
+			const annotatedText = () => text + '\u0003';
+
+			function paint() {
+				painted.textContent = text;
+				const line = text.slice(0, selection.start).split('\n');
+				const column = line[line.length - 1].length;
+				caret.style.left = `${ORIGIN.x + column * CHAR_WIDTH}px`;
+				caret.style.top = `${ORIGIN.y + (line.length - 1) * LINE_HEIGHT}px`;
+			}
+
+			window._docs_annotate_getAnnotatedText = (token) => {
+				// The real hook hands text only to the extension that claimed it.
+				if (token !== window._docs_annotate_canvas_by_ext) return null;
+
+				return {
+					getText: () => annotatedText(),
+					getSelection: () => [{ start: selection.start, end: selection.end }],
+					setSelection: (start, end) => {
+						selection = { start, end };
+						paint();
+					},
+				};
+			};
+
+			// Docs listens for input in a hidden iframe, and a paste is how an
+			// extension gets text in.
+			const frame = document.querySelector('.docs-texteventtarget-iframe');
+			frame.contentDocument.body.addEventListener('paste', (event) => {
+				const incoming = event.clipboardData.getData('text/plain');
+				text = text.slice(0, selection.start) + incoming + text.slice(selection.end);
+				selection = {
+					start: selection.start + incoming.length,
+					end: selection.start + incoming.length,
+				};
+				paint();
+				event.preventDefault();
+			});
+
+			// Lets a test read the document's state without going through the bridge.
+			window.__fakeDocs = {
+				getText: () => text,
+				setText: (next) => {
+					text = next;
+					selection = { start: 0, end: 0 };
+					paint();
+				},
+				charWidth: CHAR_WIDTH,
+				origin: ORIGIN,
+			};
+
+			paint();
+		</script>
+	</body>
+</html>
