@@ -95,6 +95,36 @@ test.describe('the suggestion card', () => {
 		await expect(card(page)).toBeVisible();
 	});
 
+	test('survives an editor that re-renders under it', async ({ page }) => {
+		await page.goto(demoUrl);
+
+		const busy = page.locator('#busy');
+		await busy.click();
+		await expect.poll(async () => (await underlines(page)).total).toBeGreaterThan(0);
+
+		// Caret inside "Their", which Harper flags.
+		await busy.evaluate((element) => {
+			const node = element.querySelector('p')!.firstChild as Text;
+			const range = document.createRange();
+			range.setStart(node, node.data.indexOf('Their') + 2);
+			range.collapse(true);
+			const selection = window.getSelection()!;
+			selection.removeAllRanges();
+			selection.addRange(range);
+		});
+
+		await expect(card(page)).toBeVisible();
+
+		// The editor fires input and re-asserts its selection every 300ms. The
+		// card must still be there, and still clickable, a second later.
+		await card(page).hover();
+		await page.waitForTimeout(1200);
+		await expect(card(page)).toBeVisible();
+
+		await page.locator('grammar-check-card button.primary').first().click();
+		await expect.poll(() => busy.textContent()).toContain('They');
+	});
+
 	test('hides on Escape', async ({ page }) => {
 		await page.goto(demoUrl);
 		await readyInput(page);

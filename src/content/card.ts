@@ -81,6 +81,7 @@ export class SuggestionCard {
 	private card?: HTMLElement;
 	private issue?: Issue;
 	private hasApiKey = false;
+	private hovered = false;
 
 	constructor(private callbacks: CardCallbacks) {
 		this.host = document.createElement('grammar-check-card');
@@ -93,6 +94,11 @@ export class SuggestionCard {
 		// leaves focus and the selection exactly where they were; buttons still
 		// get their click.
 		this.host.addEventListener('mousedown', (event) => event.preventDefault());
+
+		// While the pointer is over the card the user is using it, so nothing
+		// the page does in the background should take it away from them.
+		this.host.addEventListener('pointerenter', () => (this.hovered = true));
+		this.host.addEventListener('pointerleave', () => (this.hovered = false));
 
 		const style = document.createElement('style');
 		style.textContent = STYLES;
@@ -122,7 +128,13 @@ export class SuggestionCard {
 		return this.card !== undefined;
 	}
 
+	/** Whether the pointer is over the card, i.e. the user is reading or aiming. */
+	get isBusy(): boolean {
+		return this.hovered && this.card !== undefined;
+	}
+
 	hide(): void {
+		this.hovered = false;
 		this.issue = undefined;
 		this.card?.remove();
 		this.card = undefined;

@@ -16,6 +16,14 @@ import { sentenceAround } from './sentences';
 
 /** Long enough that typing a word does not trigger a check per keystroke. */
 const DEBOUNCE_MS = 400;
+/**
+ * The longest a check can be deferred.
+ *
+ * A plain debounce starves: editors that re-emit `input` faster than the delay
+ * — framework-driven ones do, while merely re-rendering — would push the check
+ * back forever and the field would never be checked at all.
+ */
+const MAX_DEFER_MS = 1500;
 /** Below this, there is not enough context for the checks to be useful. */
 const MIN_LENGTH = 12;
 /** Guards against pathological inputs — a code editor, a pasted log file. */
@@ -155,9 +163,31 @@ async function check(): Promise<void> {
 	paint();
 }
 
+/** When the currently deferred check was first asked for. */
+let deferredSince: number | undefined;
+
 function scheduleCheck(): void {
+	const now = Date.now();
+	deferredSince ??= now;
+
 	clearTimeout(debounce);
-	debounce = setTimeout(() => void check(), DEBOUNCE_MS);
+	const wait = Math.min(DEBOUNCE_MS, Math.max(0, deferredSince + MAX_DEFER_MS - now));
+
+	debounce = setTimeout(() => {
+		deferredSince = undefined;
+		void check();
+	}, wait);
+}
+
+/**
+ * Whether two issues are the same complaint about the same words.
+ *
+ * Every re-check builds fresh objects, so comparing by reference would call
+ * every issue new and rebuild the card underneath the user's cursor.
+ */
+function sameIssue(a: Issue | undefined, b: Issue | undefined): boolean {
+	if (!a || !b) return a === b;
+	return a.start === b.start && a.end === b.end && a.kind === b.kind && a.message === b.message;
 }
 
 function issueAtCaret(): Issue | undefined {
@@ -168,12 +198,15 @@ function issueAtCaret(): Issue | undefined {
 }
 
 function syncCard(): void {
+	// Reaching for the card must never be what dismisses it.
+	if (card.isBusy) return;
+
 	const issue = issueAtCaret();
 	if (!issue) {
 		card.hide();
 		return;
 	}
-	if (card.currentIssue === issue) return;
+	if (sameIssue(card.currentIssue, issue)) return;
 
 	const anchor = source?.caretRect();
 	if (anchor) card.show(issue, anchor);
@@ -215,10 +248,12 @@ document.addEventListener(
 document.addEventListener(
 	'input',
 	(event) => {
-		if (event.target === source?.element) {
-			card.hide();
-			scheduleCheck();
-		}
+		if (event.target !== source?.element) return;
+
+		// Rich editors emit `input` while re-rendering, not just when the user
+		// types, so this must not be what closes a card being used.
+		if (!card.isBusy) card.hide();
+		scheduleCheck();
 	},
 	true,
 );

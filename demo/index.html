@@ -79,7 +79,31 @@ Their going to the conference next week, and I think its going to be alot of fun
 			</div>
 		</div>
 
-		<h2>5. Fields that should be left alone</h2>
+		<h2>5. Busy editor</h2>
+		<p class="note">
+			Imitates a framework-driven editor like the one on claude.ai: it keeps
+			re-emitting input and moving the selection in the background. The
+			suggestion card has to survive that.
+		</p>
+		<div class="editable" id="busy" contenteditable="true">
+			<p>Their going to the conference, and I think its going to be alot of fun.</p>
+		</div>
+		<script>
+			// A React-style editor re-renders and re-asserts its selection
+			// constantly. Both are things the extension must not mistake for the
+			// user navigating away.
+			const busy = document.getElementById('busy');
+			setInterval(() => {
+				if (!busy.isConnected) return;
+				busy.dispatchEvent(new InputEvent('input', { bubbles: true }));
+				const selection = window.getSelection();
+				if (selection && selection.rangeCount && busy.contains(selection.focusNode)) {
+					selection.addRange(selection.getRangeAt(0).cloneRange());
+				}
+			}, 300);
+		</script>
+
+		<h2>6. Fields that should be left alone</h2>
 		<p class="note">A password and an email field — no underlines expected.</p>
 		<input type="password" value="hunter2" />
 		<input type="email" value="not.a.sentance@example.com" style="margin-top: 8px" />
