@@ -102,3 +102,16 @@ they return to a form.
 The architectural reasoning — why underlines stay outside the field, why edits
 go through `insertText`, why the linter is in the worker — is in
 `.claude/agents/extension-dev.md`.
+
+## How work gets done here
+
+Any request to change this repo — a feature, a bug, a refactor, a chore — goes
+to the `orchestrator` agent (`.claude/agents/orchestrator.md`). Hand it the
+request and let it plan, delegate, test and open the PR. Do not start editing
+files yourself.
+
+Exceptions, which stay in the main session: questions about the code, reading
+and explaining, and one-line throwaway edits the user is watching happen.
+
+Every change lands as a pull request with tests. Nothing is merged without
+Maja's approval, and Claude never merges.
